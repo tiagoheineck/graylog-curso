@@ -1,0 +1,4 @@
+.env
+/es_data
+/graylog_journal
+/mongo_data
