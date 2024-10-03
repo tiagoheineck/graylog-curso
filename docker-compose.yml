@@ -7,6 +7,8 @@ services:
     volumes:
       - "mongodb_data:/data/db"
     restart: "on-failure"
+    networks:
+      - graylog-network
 
   # For DataNode setup, graylog starts with a preflight UI, this is a change from just using OpenSearch/Elasticsearch.
   # Please take a look at the README at the top of this repo or the regular docs for more info.
@@ -32,6 +34,8 @@ services:
     volumes:
       - "graylog-datanode:/var/lib/graylog-datanode"
     restart: "on-failure"
+    networks:
+      - graylog-network
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
@@ -53,6 +57,8 @@ services:
         soft: -1
         hard: -1
     mem_limit: 1g
+    networks:
+      - graylog-network
 
 
   graylog:
@@ -89,10 +95,61 @@ services:
       - "graylog_data:/usr/share/graylog/data/data"
       - "graylog_journal:/usr/share/graylog/data/journal"
     restart: "on-failure"
+    networks:
+      - graylog-network
+
+  nginx:
+    image: nginx:latest
+    depends_on:
+      - graylog
+    ports:
+      - "8080:80"
+    volumes:
+      - nginx_logs:/var/log/nginx
+    networks:
+      - graylog-network
+    logging:
+      driver: "syslog"
+      options:
+        syslog-address: "udp://localhost:5140"
+        tag: "nginx"
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.10.2
+    user: root
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - graylog
+    networks:
+      - graylog-network
+
+  sidecar:
+    image: markusgulden/graylog2-sidecar-docker
+    environment:
+      - GS_SERVER_URL=http://server:9000/api/
+      - GS_SERVER_API_TOKEN=1d2ohlr8ujmfbavk8qkm95a9575o15e0kgb81be0nj9hjnsifh1f
+      - GS_NODE_ID=asf
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/graylog-sidecar:/var/lib/graylog-sidecar
+      - ./sidecar.yml:/etc/graylog/sidecar/sidecar.yml
+    depends_on:
+      - graylog
+    networks:
+      - graylog-network
+  
+
 
 volumes:
   mongodb_data:
   graylog-datanode:
   graylog_data:
   graylog_journal:
+  nginx_logs:
   elasticsearch_data:
+
+networks:
+  graylog-network:
+    driver: bridge
