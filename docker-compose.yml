@@ -120,6 +120,7 @@ services:
     volumes:
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
       - nginx_logs:/var/log/nginx
+      - squid_logs:/var/log/squid
     depends_on:
       - graylog
     networks:
@@ -139,10 +140,24 @@ services:
       - graylog
     networks:
       - graylog-network
+
+  squid:
+    image: sameersbn/squid:3.5.27-2
+    ports:
+      - "3128:3128"
+    volumes:
+      - squid_logs:/var/log/squid
+    networks:
+      - graylog-network
+    environment:
+      - SQUID_LOG_FORMAT=combined
+      - SQUID_LOG_ACCESS=/var/log/squid/access.log
+      - SQUID_LOG_ERROR=/var/log/squid/cache.log
   
 
 
 volumes:
+  squid_logs:
   mongodb_data:
   graylog-datanode:
   graylog_data:

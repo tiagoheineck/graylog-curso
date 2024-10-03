@@ -3,6 +3,7 @@ filebeat.inputs:
   enabled: true
   paths:
     - /var/log/nginx/*.log
+    - /var/log/squid/*.log
 
 output.logstash:
   hosts: ["server:5044"]
